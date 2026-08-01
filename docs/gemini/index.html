@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Gemini — a split staggered 40% keyboard that docks into a regular 40%.">
+<title>Gemini — split 40% layout, rev A</title>
+</head>
+<body>
+<style>
+  :root {
+    --bg: #f5f3ee;
+    --surface: #fdfcf9;
+    --ink: #26241f;
+    --muted: #6e6a5f;
+    --border: #e0dcd2;
+    --left-base: #d5c4a6;
+    --left-top: #e9dcc3;
+    --right-base: #aec2da;
+    --right-top: #cdddee;
+    --legend: #3a372f;
+    --legend-r: #33404f;
+    --seam: #c05a2e;
+    --plate: #eae6dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16171b;
+      --surface: #1e2026;
+      --ink: #e6e3da;
+      --muted: #9a968a;
+      --border: #33353c;
+      --left-base: #4f4633;
+      --left-top: #665b43;
+      --right-base: #36455a;
+      --right-top: #465974;
+      --legend: #ece2cd;
+      --legend-r: #d8e4f2;
+      --seam: #e07a4a;
+      --plate: #26282f;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f3ee; --surface: #fdfcf9; --ink: #26241f; --muted: #6e6a5f;
+    --border: #e0dcd2; --left-base: #d5c4a6; --left-top: #e9dcc3;
+    --right-base: #aec2da; --right-top: #cdddee; --legend: #3a372f;
+    --legend-r: #33404f; --seam: #c05a2e; --plate: #eae6dc;
+  }
+  :root[data-theme="dark"] {
+    --bg: #16171b; --surface: #1e2026; --ink: #e6e3da; --muted: #9a968a;
+    --border: #33353c; --left-base: #4f4633; --left-top: #665b43;
+    --right-base: #36455a; --right-top: #465974; --legend: #ece2cd;
+    --legend-r: #d8e4f2; --seam: #e07a4a; --plate: #26282f;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    margin: 0;
+    padding: 3rem 1.25rem 4rem;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  .mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+
+  header { margin-bottom: 2.5rem; }
+  .eyebrow {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 0.75rem;
+  }
+  h1 {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    text-wrap: balance;
+  }
+  h1 .half-l { color: var(--legend); background: linear-gradient(transparent 55%, var(--left-base) 55%); }
+  h1 .half-r { color: var(--legend); background: linear-gradient(transparent 55%, var(--right-base) 55%); }
+  .lede { max-width: 62ch; color: var(--muted); margin: 0; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  h2 {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin: 3rem 0 1.25rem;
+    font-weight: 600;
+  }
+
+  .board-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem 1rem 1rem;
+  }
+  .board-scroll { overflow-x: auto; }
+  #board { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  .board-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap; margin-top: 1rem;
+    padding-top: 1rem; border-top: 1px solid var(--border);
+  }
+  .legend-row { display: flex; gap: 1.25rem; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+  .legend-row span { display: inline-flex; align-items: center; gap: 0.45rem; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border); }
+  .swatch.l { background: var(--left-top); }
+  .swatch.r { background: var(--right-top); }
+  .swatch.s { background: none; border: none; width: 16px; height: 0; border-top: 2px dashed var(--seam); border-radius: 0; }
+  button#toggle {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase;
+    background: var(--ink); color: var(--bg);
+    border: none; border-radius: 6px; padding: 0.6rem 1.1rem;
+    cursor: pointer;
+  }
+  button#toggle:hover { opacity: 0.85; }
+  button#toggle:focus-visible { outline: 2px solid var(--seam); outline-offset: 2px; }
+
+  .half-group { transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1); }
+  #seam-path { transition: opacity 0.4s ease; }
+  .split .half-left  { transform: translateX(calc(var(--gap) * -0.5)); }
+  .split .half-right { transform: translateX(calc(var(--gap) *  0.5)); }
+  .split #seam-path { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .half-group, #seam-path { transition: none; }
+  }
+
+  table {
+    border-collapse: collapse; width: 100%;
+    font-size: 0.9rem;
+  }
+  th, td { text-align: left; padding: 0.55rem 0.9rem 0.55rem 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  td.num { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .table-scroll { overflow-x: auto; }
+
+  .dims {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .dim { background: var(--surface); padding: 1rem 1.25rem; }
+  .dim .k { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+  .dim .v { font-size: 1.35rem; font-family: ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; margin-top: 0.2rem; }
+  .dim .v small { font-size: 0.8rem; color: var(--muted); }
+
+  ul { padding-left: 1.2rem; }
+  li { margin-bottom: 0.4rem; }
+  li::marker { color: var(--seam); }
+  p { max-width: 68ch; }
+  .note { color: var(--muted); font-size: 0.85rem; }
+</style>
+
+<main>
+  <header>
+    <p class="eyebrow">design/gemini · rev A · 2026-08-01</p>
+    <h1><span class="half-l">GEM</span><span class="half-r">INI</span></h1>
+    <p class="lede">A split, row-staggered 40% whose halves dock back into a
+    <strong>regular 12.75u × 4u forty</strong>. The row stagger is the joint:
+    the seam steps between T/Y, G/H, B/N and the spacebars, so the two boards
+    interlock like puzzle pieces.</p>
+  </header>
+
+  <div class="board-card">
+    <div class="board-scroll"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="board-foot">
+      <div class="legend-row">
+        <span><i class="swatch l"></i>left half · 26 keys</span>
+        <span><i class="swatch r"></i>right half · 25 keys</span>
+        <span><i class="swatch s"></i>docking seam</span>
+      </div>
+      <button id="toggle" aria-pressed="false">Split the halves</button>
+    </div>
+  </div>
+
+  <h2>Seam geometry</h2>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Row</th><th>Left half</th><th>Seam x</th><th>Right half</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Tab 1.25 · Q W E R T</td><td class="num">6.25u</td><td>Y U I O P · Bksp 1.5</td></tr>
+      <tr><td class="num">2</td><td>Ctrl 1.5 · A S D F G</td><td class="num">6.50u</td><td>H J K L ; · Enter 1.25</td></tr>
+      <tr><td class="num">3</td><td>Shift 1.75 · Z X C V B</td><td class="num">6.75u</td><td>N M , . · Shift 2</td></tr>
+      <tr><td class="num">4</td><td>Ctrl 1.25 · GUI 1 · Alt 1.25 · Space 2.75</td><td class="num">6.25u</td><td>Space 2.75 · Fn / Alt / Ctrl 1.25</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Every row totals 12.75u with standard stagger (1.25 → 1.5 → 1.75).
+  Rows 1–3 step the seam 0.25u right per row; row 4 steps back to 6.25u at the
+  split spacebars, giving the right half a 0.5u tooth that hooks under row 3 —
+  a built-in mechanical interlock.</p>
+
+  <h2>Dimensions <span class="note">(1u = 19.05 mm)</span></h2>
+  <div class="dims">
+    <div class="dim"><div class="k">Docked</div><div class="v">242.9 × 76.2 <small>mm</small></div></div>
+    <div class="dim"><div class="k">Left half</div><div class="v">≤ 128.6 <small>mm wide</small></div></div>
+    <div class="dim"><div class="k">Right half</div><div class="v">≤ 123.8 <small>mm wide</small></div></div>
+    <div class="dim"><div class="k">Keys</div><div class="v">51 <small>total</small></div></div>
+  </div>
+
+  <h2>Docking mechanism (proposal)</h2>
+  <ul>
+    <li><strong>Alignment</strong> — the stepped seam self-aligns in plan; two press-fit dowel pins on the seam faces handle height.</li>
+    <li><strong>Retention</strong> — 4–6 pairs of 5×2&nbsp;mm neodymium magnets, polarity-keyed so the halves only mate one way.</li>
+    <li><strong>Link</strong> — TRRS/JST between halves (short jumper docked, long cable split); stretch goal is pogo pins in the seam so docked mode needs no cable.</li>
+    <li><strong>Controllers</strong> — one RP2040-class per half, USB-C on each rear edge, QMK <span class="mono">SPLIT_USB_DETECT</span> so either side can be master.</li>
+  </ul>
+
+  <h2>Open questions</h2>
+  <ul>
+    <li>Split space 2.75/2.75 as drawn, or asymmetric (2.25 + a thumb Fn at the seam)?</li>
+    <li>Right Shift 2u, or 1u Shift + dedicated <span class="mono">/</span> or <span class="mono">↑</span>?</li>
+    <li>Pogo pins vs. cable-only when docked?</li>
+    <li>Rotary encoder in place of a 1u mod on each half?</li>
+  </ul>
+</main>
+
+<script>
+  const U = 56;                 // px per key unit
+  const GAP = 0.9 * U;          // split separation
+  const PAD = 14;               // svg padding
+  const BW = 12.75 * U, BH = 4 * U;
+
+  // [legend, width-in-u] per key; halves listed separately
+  const LEFT = [
+    [["Tab",1.25],["Q",1],["W",1],["E",1],["R",1],["T",1]],
+    [["Ctrl",1.5],["A",1],["S",1],["D",1],["F",1],["G",1]],
+    [["Shift",1.75],["Z",1],["X",1],["C",1],["V",1],["B",1]],
+    [["Ctrl",1.25],["GUI",1],["Alt",1.25],["",2.75]],
+  ];
+  const RIGHT = [
+    [["Y",1],["U",1],["I",1],["O",1],["P",1],["Bksp",1.5]],
+    [["H",1],["J",1],["K",1],["L",1],[";",1],["Enter",1.25]],
+    [["N",1],["M",1],[",",1],[".",1],["Shift",2]],
+    [["",2.75],["Fn",1.25],["Alt",1.25],["Ctrl",1.25]],
+  ];
+  const SEAM = [6.25, 6.5, 6.75, 6.25]; // seam x per row, in u
+
+  const svg = document.getElementById('board');
+  const NS = 'http://www.w3.org/2000/svg';
+  const totalW = BW + GAP + PAD * 2, totalH = BH + PAD * 2;
+  svg.setAttribute('viewBox', `0 0 ${totalW} ${totalH}`);
+  svg.setAttribute('width', totalW);
+  svg.style.setProperty('--gap', GAP + 'px');
+  const cx = PAD + GAP / 2;     // docked board origin x (centered in split-capable canvas)
+
+  function el(name, attrs, parent) {
+    const e = document.createElementNS(NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e);
+    return e;
+  }
+
+  function drawKey(g, x, y, w, label, side) {
+    const m = 2.5;                       // gap between caps
+    const base = side === 'l' ? 'var(--left-base)' : 'var(--right-base)';
+    const top  = side === 'l' ? 'var(--left-top)'  : 'var(--right-top)';
+    const ink  = side === 'l' ? 'var(--legend)'    : 'var(--legend-r)';
+    el('rect', { x: x + m, y: y + m, width: w * U - 2 * m, height: U - 2 * m, rx: 7, fill: base }, g);
+    el('rect', { x: x + m + 5, y: y + m + 3, width: w * U - 2 * m - 10, height: U - 2 * m - 12, rx: 5, fill: top }, g);
+    if (label) {
+      const t = el('text', { x: x + m + 11, y: y + m + 18, fill: ink,
+        'font-family': 'system-ui, sans-serif', 'font-size': label.length > 2 ? 11 : 13.5,
+        'font-weight': 600 }, g);
+      t.textContent = label;
+    }
+  }
+
+  function drawHalf(rows, side) {
+    const g = el('g', { class: 'half-group half-' + (side === 'l' ? 'left' : 'right') }, svg);
+    // plate silhouette following the seam
+    const pts = [];
+    if (side === 'l') {
+      pts.push([cx, PAD]);
+      SEAM.forEach((s, i) => { pts.push([cx + s * U, PAD + i * U], [cx + s * U, PAD + (i + 1) * U]); });
+      pts.push([cx, PAD + BH]);
+    } else {
+      pts.push([cx + BW, PAD]);
+      SEAM.forEach((s, i) => { pts.push([cx + s * U, PAD + i * U], [cx + s * U, PAD + (i + 1) * U]); });
+      pts.reverse();
+      pts.unshift([cx + BW, PAD + BH]);
+    }
+    el('polygon', { points: pts.map(p => p.join(',')).join(' '), fill: 'var(--plate)',
+      stroke: 'var(--border)', 'stroke-width': 1 }, g);
+    rows.forEach((row, r) => {
+      let x = side === 'l' ? cx : cx + SEAM[r] * U;
+      row.forEach(([label, w]) => { drawKey(g, x, PAD + r * U, w, label, side); x += w * U; });
+    });
+    return g;
+  }
+
+  drawHalf(LEFT, 'l');
+  drawHalf(RIGHT, 'r');
+
+  // seam highlight (docked only)
+  const seamPts = SEAM.flatMap((s, i) => [[cx + s * U, PAD + i * U], [cx + s * U, PAD + (i + 1) * U]]);
+  el('polyline', { id: 'seam-path', points: seamPts.map(p => p.join(',')).join(' '),
+    fill: 'none', stroke: 'var(--seam)', 'stroke-width': 2.5, 'stroke-dasharray': '7 5',
+    'stroke-linejoin': 'round' }, svg);
+
+  const btn = document.getElementById('toggle');
+  btn.addEventListener('click', () => {
+    const split = svg.classList.toggle('split');
+    btn.textContent = split ? 'Dock the halves' : 'Split the halves';
+    btn.setAttribute('aria-pressed', String(split));
+  });
+</script>
+</body>
+</html>

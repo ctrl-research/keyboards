@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Gemini — split (halves separated 0.75u)",
+    "notes": "Same geometry as gemini_docked.kle.json with the right half shifted +0.75u to show the interlocking seam."
+  },
+  [{"c":"#e8d8c3","w":1.25},"Tab","Q","W","E","R","T",{"c":"#c3d4e8","x":0.75},"Y","U","I","O","P",{"w":1.5},"Bksp"],
+  [{"c":"#e8d8c3","w":1.5},"Ctrl","A","S","D","F","G",{"c":"#c3d4e8","x":0.75},"H","J","K","L",";",{"w":1.25},"Enter"],
+  [{"c":"#e8d8c3","w":1.75},"Shift","Z","X","C","V","B",{"c":"#c3d4e8","x":0.75},"N","M",",",".",{"w":2},"Shift"],
+  [{"c":"#e8d8c3","w":1.25},"Ctrl","GUI",{"w":1.25},"Alt",{"w":2.75},"Space",{"c":"#c3d4e8","x":0.75,"w":2.75},"Space",{"w":1.25},"Fn",{"w":1.25},"Alt",{"w":1.25},"Ctrl"]
+]
