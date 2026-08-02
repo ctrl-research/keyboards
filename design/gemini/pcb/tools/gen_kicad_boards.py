@@ -206,26 +206,26 @@ def build(half):
         # (DV1) per the Pico datasheet. D+/D- run to TP pads beside the
         # module: jumper them to the Pico's underside TP3/TP2 (short wires
         # or spring pins) — USB data is NOT on the 40-pin header.
-        place("HRO-TYPE-C-31-M-12-Assembly", "J2", "USB-C host", 88.0, -3.5,
+        place("HRO-TYPE-C-31-M-12-Assembly", "J2", "USB-C host", 9.5, -3.5,
               pins={"1": "GND", "12": "GND", "13": "GND",
                     "2": "VBUS_HOST", "11": "VBUS_HOST",
                     "6": "USB_DP", "7": "USB_DP",
                     "5": "USB_DM", "8": "USB_DM",
                     "4": "CC1", "9": "CC2"})
-        place("R_0603_1608Metric", "R3", "5k1", 81.0, -1.0,
+        place("R_0603_1608Metric", "R3", "5k1", 16.5, -1.5,
               pins={"1": "CC1", "2": "GND"})
-        place("R_0603_1608Metric", "R4", "5k1", 95.0, -1.0,
+        place("R_0603_1608Metric", "R4", "5k1", 16.5, -5.5,
               pins={"1": "CC2", "2": "GND"})
-        place("D_SOD-123", "DV1", "B5819W", 100.0, -4.0, rot=180,
+        place("D_SOD-123", "DV1", "B5819W", 22.0, -5.5, rot=180,
               pins={"1": "VSYS", "2": "VBUS_HOST"})  # cathode -> VSYS
         # Wire-jumper targets for the Pico's underside USB test points
         # (TP3=D+, TP2=D-), in the brow near the module's USB end. Routing
         # phase may move them directly under the exact TP positions for
         # spring-pin mounting instead of wires.
         place("TestPoint_THTPad_D1.5mm_Drill0.7mm", "TP1", "USB_DP",
-              5.0, -1.5, pins={"1": "USB_DP"})
+              21.5, -1.5, pins={"1": "USB_DP"})
         place("TestPoint_THTPad_D1.5mm_Drill0.7mm", "TP2", "USB_DM",
-              10.0, -1.5, pins={"1": "USB_DM"})
+              26.0, -1.5, pins={"1": "USB_DM"})
     else:
         # Passive half: MCP23017 in the socket-free strip beside the spacebar.
         place("SOIC-28W_7.5x17.9mm_P1.27mm", "U1", "MCP23017-E/SO", 46.0, 66.5,

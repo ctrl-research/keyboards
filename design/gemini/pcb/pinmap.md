@@ -36,10 +36,12 @@ hotswap socket. The case gets a ~5 mm pocket along this strip (elsewhere
 Unused GPIOs break out to labeled test pads (encoder, pogo dock
 detect — future).
 
-## Host USB-C port (J2, left half, in the brow)
+## Host USB-C port (J2, left half, outer-left corner of the brow)
 
-Alternative to the Pico's onboard micro-USB (which sits mid-board at the
-side edge — usable but awkward for a desk cable). Proper device-role port:
+The desk-cable port, at the board's top-left corner — the link port sits at
+the opposite (seam) end of the brow. Alternative to the Pico's onboard
+micro-USB (mid-board at the side edge — flash/debug fallback). Proper
+device-role port:
 
 - **CC1/CC2**: separate 5.1 kΩ pulldowns (R3/R4) so C-to-C cables and hosts
   supply VBUS.
