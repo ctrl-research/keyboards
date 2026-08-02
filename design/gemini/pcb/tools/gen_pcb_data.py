@@ -32,6 +32,10 @@ SEAM = [6.25, 6.50, 6.75, 6.25]  # docked seam x per row, in u
 BOARD_W, BOARD_H = 12.75, 4.0
 BROW_MM = 8.0            # rear strip above row 0 hosting the USB-C link ports
 BROW_U = BROW_MM / U
+# PCB/plate stop short of the true key-boundary seam so the case gets a
+# full-height seam wall; the case outer face carries the real boundary.
+SEAM_INSET_MM = 1.45
+SEAM_INSET_U = SEAM_INSET_MM / U
 
 
 def keys(rows, right=False):
@@ -105,11 +109,11 @@ os.makedirs(os.path.join(OUT, "kbplacer"), exist_ok=True)
 
 # Left outline: CCW-ish from top-left, seam on the right side. The rear brow
 # extends the top edge to y = -BROW_U; the seam runs straight through it.
-left_seam = seam_steps()
+left_seam = [(x - SEAM_INSET_U, y) for x, y in seam_steps()]
 left_seam[0] = (left_seam[0][0], -BROW_U)
 left_outline = [(0.0, -BROW_U)] + left_seam + [(0.0, BOARD_H)]
 # Right outline in local coords (origin at docked x=6.25u): seam on the left side
-right_seam = seam_steps(local_offset=6.25)
+right_seam = [(x + SEAM_INSET_U, y) for x, y in seam_steps(local_offset=6.25)]
 right_seam[0] = (right_seam[0][0], -BROW_U)
 right_w = BOARD_W - 6.25  # 6.5u
 # start top-right, go down the right edge, back up the seam
@@ -123,5 +127,7 @@ kle_matrix("left", LEFT_ROWS)
 kle_matrix("right", RIGHT_ROWS, right=True)
 
 print(f"left keys: {nl}, right keys: {nr}, total: {nl + nr}")
-print(f"left max width: {max(SEAM) * U:.4f} mm, right width: {right_w * U:.4f} mm, "
-      f"depth: {BOARD_H * U + BROW_MM:.1f} mm (incl {BROW_MM} mm brow)")
+print(f"left max width: {max(SEAM) * U - SEAM_INSET_MM:.4f} mm, "
+      f"right width: {right_w * U - SEAM_INSET_MM:.4f} mm, "
+      f"depth: {BOARD_H * U + BROW_MM:.1f} mm (incl {BROW_MM} mm brow); "
+      f"seam inset {SEAM_INSET_MM} mm")

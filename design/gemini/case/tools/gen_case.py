@@ -20,11 +20,14 @@ PCB = os.path.join(os.path.dirname(CASE), "pcb", "placement")
 
 P = dict(
     clear=0.25,          # PCB outline -> cavity wall
-    seam_clear=0.05,     # cavity/plate clearance at the seam plane
+    seam_inset=1.45,     # PCB stops this short of the true boundary; the
+                         # case outer face sits ON the boundary -> the seam
+                         # wall is (1.45 - 0.25) = 1.2 mm, full height
+    seam_plate=0.05,     # plate edge clearance beyond the (inset) outline
     wall=4.25,           # PCB outline -> case outer face (non-seam)
     floor=3.0,
-    seam_wall_in=3.0,    # seam wall thickness, grown inward under the PCB
-    seam_wall_top=4.0,   # keeps clear of near-seam hotswap sockets (z 4.15+)
+    mag_base_in=1.0,     # below z4 the seam wall thickens inward for magnets
+    mag_base_top=4.0,
     pcb_bottom=6.0,
     ledge_z=10.1,        # lower gasket shelf
     rim_z=11.8,          # bottom/top joint line
@@ -45,8 +48,8 @@ P = dict(
     pilot_d=1.7, thru_d=2.3, cb_d=4.2, cb_depth=2.0, notch_d=5.5,
 )
 
-SEAM_X_MIN_L = 119.0    # left half: seam verts have x >= this
-SEAM_X_MAX_R = 9.6      # right half: seam verts have x <= this
+SEAM_X_MIN_L = 117.5    # left half: seam verts have x >= this
+SEAM_X_MAX_R = 11.05    # right half: seam verts have x <= this
 ROW_Y = [9.525, 28.575, 47.625, 66.675]
 SEAM_X_L = [119.0625, 123.825, 128.5875, 119.0625]
 SEAM_X_R = [0.0, 4.7625, 9.525, 0.0]
@@ -126,17 +129,17 @@ def zcyl(x, y, z0, z1, d):
 
 def bottom_case(half, outline):
     o = P
-    outer = offset_poly(outline, half, o["wall"], 0.0)
-    cav_low = offset_poly(outline, half, o["clear"], -o["seam_wall_in"])
-    cav_mid = offset_poly(outline, half, o["clear"], o["seam_clear"])
-    cav_top = offset_poly(outline, half, o["plate_pocket"], o["seam_clear"])
+    outer = offset_poly(outline, half, o["wall"], o["seam_inset"])
+    cav_low = offset_poly(outline, half, o["clear"], -o["mag_base_in"])
+    cav_mid = offset_poly(outline, half, o["clear"], o["clear"])
+    cav_top = offset_poly(outline, half, o["plate_pocket"], o["clear"])
 
     body = wp_poly(outer, -o["floor"], o["rim_z"])
-    body = body.cut(wp_poly(cav_low, 0, o["seam_wall_top"]))
-    body = body.cut(wp_poly(cav_mid, o["seam_wall_top"], o["ledge_z"]))
+    body = body.cut(wp_poly(cav_low, 0, o["mag_base_top"]))
+    body = body.cut(wp_poly(cav_mid, o["mag_base_top"], o["ledge_z"]))
     body = body.cut(wp_poly(cav_top, o["ledge_z"], o["rim_z"] + 1))
 
-    # magnet pockets in the seam wall
+    # magnet pockets, drilled inward from the outer seam face (the boundary)
     seam_x = SEAM_X_L if half == "left" else SEAM_X_R
     for y, sx in zip(ROW_Y, seam_x):
         if half == "left":
@@ -169,7 +172,7 @@ def plate(half, outline, keys):
     stiffening skirt below with relieved openings — printed plates curl
     under the sustained clip force of 40+ switches without it."""
     o = P
-    poly = offset_poly(outline, half, o["plate_margin"], 0.0)
+    poly = offset_poly(outline, half, o["plate_margin"], o["seam_plate"])
     pl = wp_poly(poly, o["plate_z0"], o["plate_z1"])
     skirt_poly = offset_poly(outline, half, -o["skirt_inset"], -o["skirt_inset"])
     pl = pl.union(wp_poly(skirt_poly, o["plate_z0"] - o["skirt_depth"], o["plate_z0"] + 0.01))
@@ -221,9 +224,11 @@ def fit_coupon():
 
 def top_case(half, outline):
     o = P
-    outer = offset_poly(outline, half, o["wall"], 0.0)
-    opening = offset_poly(outline, half, o["bezel_gap"], 2.0)   # open at seam
-    pocket = offset_poly(outline, half, o["plate_pocket"], 2.0)
+    # The bezel opening hugs the key field only — the brow is roofed over.
+    field = [(x, max(y, 0.0)) for x, y in outline]
+    outer = offset_poly(outline, half, o["wall"], o["seam_inset"])
+    opening = offset_poly(field, half, o["bezel_gap"], 3.0)     # open at seam
+    pocket = offset_poly(outline, half, o["plate_pocket"], o["clear"])
 
     body = wp_poly(outer, o["rim_z"], o["top_z"])
     body = body.cut(wp_poly(opening, o["rim_z"] - 1, o["top_z"] + 1))
