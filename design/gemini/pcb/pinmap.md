@@ -9,11 +9,13 @@ over I2C (ErgoDox-style; QMK supports expander matrices natively).
 
 ## Left half — Raspberry Pi Pico (U1)
 
-On the back, **horizontal across the brow/row-0 boundary** (center
-y ≈ 5.4 mm), micro-USB (host port) exiting the **outer-left side edge**
-near the rear corner. Its two header pin rows land at y ≈ −3.5 mm (inside
-the brow) and y ≈ +14.3 mm (the corridor between row 0's socket pads and
-row 1's sockets) — no through-hole touches any socket pad or switch drill.
+On the back, **horizontal, centered on the row-1 switch centerline**
+(y = 28.575 mm), micro-USB (host port) exiting the **outer-left side
+edge**. Its two header pin rows land at y ≈ 19.7 and 37.5 mm — near the
+centers of the top-face corridors between switch housings, so the pins
+protruding through the board clear the switch bodies sitting on top, and
+no through-hole touches any socket pad or switch drill. Two row-1 diodes
+(D10, D11) relocate into the brow to stay off the lower pin row.
 **Mounted on low-profile headers (~2.5 mm standoff), not flat**: switch
 pins protrude ~1.7 mm below the PCB and hotswap sockets are 1.85 mm tall,
 so both clear underneath the module — every key above the Pico keeps its
@@ -26,10 +28,12 @@ hotswap socket. The case gets a ~5 mm pocket along this strip (elsewhere
 | 2           | GP1      | I2C0 SCL        | to link port D− · 4.7 kΩ pull-up (R2) |
 | 4–7         | GP2–GP5  | ROW0–ROW3       | shared row nets, left matrix   |
 | 9–12, 14–15 | GP6–GP11 | COL0–COL5       | left matrix (pin 13 is GND)    |
-| 36          | 3V3      | Logic + link pwr| feeds right half via link VBUS |
+| 21          | GP16     | LED data        | → 74AHCT1G125 (U2) → LED chain |
+| 36          | 3V3      | Logic rail      | I2C pull-ups                   |
+| 40          | VBUS     | +5V             | LED power + right half via link|
 | 3, 8, 13, … | GND      | Ground          |                                |
 
-Unused GPIOs break out to labeled test pads (encoder, RGB, pogo dock
+Unused GPIOs break out to labeled test pads (encoder, pogo dock
 detect — future).
 
 ## Right half — MCP23017-E/SO (U1, SOIC-28)
@@ -43,18 +47,37 @@ detect — future).
 | 15–17   | A0–A2    | tied GND              |
 | 18      | /RESET   | tied 3V3              |
 
+3V3 comes from a local **MCP1700-3302** LDO (U2) fed by the 5V link, with
+1 µF caps on both sides (C2/C3).
+
 ## Link port (J1 on each half — HRO TYPE-C-31-M-12)
 
-| USB-C pins        | Net  | Carries          |
-|-------------------|------|------------------|
-| GND (1/12/shield) | GND  | ground           |
-| VBUS (2/11)       | +3V3 | power to right   |
-| D+ (A6/B6 = 6/7)  | SDA  | I2C data         |
-| D− (A7/B7 = 5/8)  | SCL  | I2C clock        |
+| USB-C pins        | Net      | Carries                  |
+|-------------------|----------|--------------------------|
+| GND (1/12/shield) | GND      | ground                   |
+| VBUS (2/11)       | +5V      | power to right half + LEDs |
+| D+ (A6/B6 = 6/7)  | SDA      | I2C data                 |
+| D− (A7/B7 = 5/8)  | SCL      | I2C clock                |
+| CC + SBU (3/4/9/10) | LED_LINK | WS2812 LED chain data  |
 
-CC/SBU left unconnected. ⚠ **Not a real USB port** — label it. Verify the
-pad↔pin mapping against the HRO datasheet before fab. Consider series
-resistors on D± so nothing dies if someone plugs in a charger.
+CC1/CC2 are tied together on each board so the cable's single CC wire
+carries LED data regardless of plug orientation (SBUs tied too — unwired
+in USB 2.0 cables, parallel in full-featured ones, harmless either way).
+⚠ **Requires a basic non-e-marked C-to-C cable** — an e-marker chip loads
+the CC line. ⚠ **Not a real USB port** — label it. Verify the pad↔pin
+mapping against the HRO datasheet before fab. Consider series resistors on
+D± so nothing dies if someone plugs in a charger.
+
+## Per-key RGB (south-facing)
+
+**SK6812 MINI-E** reverse-mount, one per key, on the back at the switch's
+**south LED window** (key center +5.08 mm) shining up through a plated
+cutout — south-facing, so no north-facing keycap interference. Chain:
+GP16 → 74AHCT1G125 level shifter (3V3→5V, U2 left) → left 22 LEDs
+(row-major) → link CC wire → right 21 LEDs. One 43-LED chain in firmware —
+no split RGB sync. Power: 5V from Pico VBUS; **cap brightness in QMK**
+(43 × ~60 mA at full white ≈ 2.6 A — far beyond a USB 2.0 port's 500 mA;
+`RGB_MATRIX_MAXIMUM_BRIGHTNESS` ≈ 120 keeps worst-case near spec).
 
 ## Matrix (COL2ROW, 1N4148W SOD-123 per key)
 
@@ -73,13 +96,16 @@ the standoff (see above).
 
 | Qty | Part                                     |
 |-----|------------------------------------------|
-| 1   | Raspberry Pi Pico (castellated)          |
+| 1   | Raspberry Pi Pico + low-profile headers  |
 | 1   | MCP23017-E/SO (SOIC-28)                  |
+| 1   | 74AHCT1G125 SOT-23-5 (LED level shift)   |
+| 1   | MCP1700-3302 SOT-23 (right 3V3 LDO)      |
 | 2   | HRO TYPE-C-31-M-12 USB-C receptacle      |
+| 43  | SK6812 MINI-E (reverse mount RGB)        |
 | 43  | 1N4148W SOD-123                          |
 | 43  | Kailh MX hotswap socket                  |
 | 2   | 4.7 kΩ 0603 (I2C pull-ups, left)         |
-| 1   | 100 nF 0603 (MCP decoupling, right)      |
-| 1   | USB 2.0 C-to-C cable (link)              |
+| 1   | 100 nF 0603 + 2 × 1 µF 0603              |
+| 1   | USB 2.0 C-to-C cable (link, non-e-marked)|
 | 8–12| 5×2 mm neodymium magnets (case)          |
 | —   | M2 heat-set inserts + screws (case)      |

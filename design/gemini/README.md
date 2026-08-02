@@ -77,8 +77,10 @@ flush metal-to-metal / plastic-to-plastic.)
     the back); the right half is passive with an MCP23017 I/O expander.
   - Halves link over **USB-C carrying I2C** (3V3/SDA/SCL/GND) — any USB 2.0
     C-to-C cable, orientation-proof. Works docked and split.
+  - Per-key RGB: south-facing SK6812 MINI-E (reverse-mount), one 43-LED
+    chain crossing the link on the cable's CC wire.
   - Stretch goal: spring-loaded pogo pins in the row-2/3 seam faces carrying
-    the same 4 signals so docking needs no cable at all.
+    the same signals so docking needs no cable at all.
   - Details: [`pcb/pinmap.md`](pcb/pinmap.md).
 
 ## Matrix

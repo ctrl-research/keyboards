@@ -53,10 +53,14 @@ npx gltfpack -i raw-left.glb -o docs/gemini/3d/gemini-left.glb -cc -mi -si 0.4 -
 ## Before fab (rev A checklist)
 
 - [ ] Route both boards (kbplacer placements + seam edge cuts are done)
-- [ ] Verify HRO USB-C pad↔pin mapping against the datasheet
+- [ ] Verify HRO USB-C pad↔pin mapping against the datasheet (incl. which
+      pads are CC vs SBU — the LED chain crosses on CC)
+- [ ] Verify SK6812 MINI-E pad order (assumed 1=VDD 2=DOUT 3=VSS 4=DIN)
 - [ ] Series resistors on link D± so a real charger/host can't hurt anything
-- [ ] DRC: Pico pin rows sit at y=-3.5 (brow) and y=+14.3 (inter-row
-      corridor) — confirm clear of socket pads after any placement nudges
+- [ ] QMK: cap `RGB_MATRIX_MAXIMUM_BRIGHTNESS` (~120) — 43 LEDs at full
+      white would far exceed a 500 mA USB 2.0 budget
+- [ ] DRC: Pico pin rows sit at y=19.7 and y=37.5, in the corridors between
+      switch rows on both faces — confirm clearances after any nudges
 - [ ] Confirm J1 orientation (port opening must overhang the rear edge)
 - [ ] Case: ~5 mm pocket under the Pico strip (~2 mm elsewhere), rear
       cutouts for both link ports, side cutout for the Pico micro-USB

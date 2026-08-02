@@ -37,15 +37,28 @@ SW_FP = {  # width_u -> hotswap footprint name
 }
 STAB_FP = {2.0: "STAB_MX_2u", 2.75: "STAB_MX_2.75u"}
 
+# Diodes that would sit on the Pico's lower header pin row are relocated
+# into the brow (they connect to shared ROW nets; position is free).
+DIODE_OVERRIDE = {
+    "left": {"D10": (30.0, -4.0), "D11": (36.0, -4.0), "D12": (42.0, -4.0)},
+    "right": {},
+}
+
+# SK6812 MINI-E pads (datasheet): 1=VDD, 2=DOUT, 3=VSS, 4=DIN.
+LED_FP = "LED_SK6812MINI-E_3.2x2.8mm_P1.5mm_ReverseMount"
+LED_OFFSET_Y = 5.08  # south of the switch center, in the MX LED window
+
 # Pico physical pin -> net (left half only). GP0/GP1 = I2C0 SDA/SCL.
 PICO_PINS = {
     "1": "SDA", "2": "SCL",
     "4": "ROW0", "5": "ROW1", "6": "ROW2", "7": "ROW3",
     "9": "COL0", "10": "COL1", "11": "COL2", "12": "COL3",
     "14": "COL4", "15": "COL5",
+    "21": "LED_DATA",   # GP16 -> level shifter A
     "3": "GND", "8": "GND", "13": "GND", "18": "GND", "23": "GND",
     "28": "GND", "33": "GND", "38": "GND", "42": "GND",
     "36": "+3V3",
+    "40": "+5V",        # VBUS: powers the LED chains + right half via link
 }
 
 # MCP23017 SOIC-28 pin -> net (right half only).
@@ -60,13 +73,17 @@ MCP_PINS = {
 }
 
 # HRO TYPE-C-31-M-12 (12 pads L->R + 13 shield). Pads 1/12 GND, 2/11 VBUS;
-# middle D pairs tied A+B so any cable orientation works. VERIFY against the
-# HRO datasheet before fab.
+# middle D pairs tied A+B so any cable orientation works. CC and SBU pads
+# (3/4/9/10) are all tied to the LED chain link: the cable's CC wire carries
+# WS2812 data across (orientation-proof since both CCs are tied; SBUs are
+# unwired in USB 2.0 cables). Requires a basic non-e-marked C-to-C cable —
+# an e-marker chip would load the CC line. VERIFY pad map vs datasheet.
 USBC_PINS = {
     "1": "GND", "12": "GND", "13": "GND",
-    "2": "+3V3", "11": "+3V3",
+    "2": "+5V", "11": "+5V",
     "6": "SDA", "7": "SDA",   # D+ (A6/B6)
     "5": "SCL", "8": "SCL",   # D- (A7/B7)
+    "3": "LED_LINK", "4": "LED_LINK", "9": "LED_LINK", "10": "LED_LINK",
 }
 
 
@@ -130,8 +147,10 @@ def build(half):
             assign(fp, pin, netname)
         return fp
 
-    # --- switches, diodes, stabs ---
-    for row in read_placement(half):
+    # --- switches, diodes, LEDs, stabs ---
+    keys = read_placement(half)
+    n_leds = len(keys)
+    for i, row in enumerate(keys):
         r, c = row["matrix_row"], row["matrix_col"]
         w = float(row["width_u"])
         cx, cy = float(row["center_x_mm"]), float(row["center_y_mm"])
@@ -141,19 +160,30 @@ def build(half):
         # the socket sits on the back and pads land on B.Cu.
         place(SW_FP[w], f"SW{r}{c}", row["legend"], cx, cy, back=True,
               pins={"1": f"COL{c}", "2": keynet})
-        place("D_SOD-123", f"D{r}{c}", "1N4148W", cx - 4.0, cy + 7.4, rot=180,
+        dx, dy = DIODE_OVERRIDE[half].get(f"D{r}{c}", (cx - 4.0, cy + 8.0))
+        place("D_SOD-123", f"D{r}{c}", "1N4148W", dx, dy, rot=180,
               back=True, pins={"1": f"ROW{r}", "2": keynet})  # cathode->row
+        # Per-key RGB, reverse-mount on the back shining up through the
+        # cutout in the switch's south LED window. Chain is row-major;
+        # it enters/exits the board via LED_LINK on the USB-C CC pins.
+        din = f"LED_CH{i:02d}" if i else ("LED_CH00" if half == "left" else "LED_LINK")
+        dout = "LED_LINK" if (half == "left" and i == n_leds - 1) else f"LED_CH{i + 1:02d}"
+        if half == "right" and i == n_leds - 1:
+            dout = "LED_END"
+        place(LED_FP, f"LED{r}{c}", "SK6812MINI-E", cx, cy + LED_OFFSET_Y,
+              back=True, pins={"1": "+5V", "2": dout, "3": "GND", "4": din})
         if w in STAB_FP:
             place(STAB_FP[w], f"ST_SW{r}{c}", f"stab {w}u", cx, cy, back=False)
 
     # --- half-specific electronics (all on the back) ---
     if half == "left":
-        # Pico horizontal across the brow/row-0 boundary, micro-USB out the
-        # left side edge. Header-mounted (~2.5 mm standoff). Its two TH pin
-        # rows land at y=-3.5 (in the brow) and y=+14.3 (the corridor between
-        # row 0's socket pads and row 1's sockets) — clear of all drills/pads.
-        place("RPi_Pico_SMD_TH", "U1", "Raspberry Pi Pico", 26.0, 5.4, rot=90,
-              pins=PICO_PINS)
+        # Pico horizontal, centered on the row-1 switch centerline, micro-USB
+        # out the left side edge. Header-mounted (~2.5 mm standoff). Its two
+        # TH pin rows land at y=19.7 and y=37.5 — near the centers of the
+        # top-face corridors between switch housings, clear of all switch
+        # bodies, drills, and socket pads on both faces.
+        place("RPi_Pico_SMD_TH", "U1", "Raspberry Pi Pico", 26.0, 28.575,
+              rot=90, pins=PICO_PINS)
         # Link port in the brow, near the seam.
         place("HRO-TYPE-C-31-M-12-Assembly", "J1", "USB-C link", 110.0, -3.5,
               pins=USBC_PINS)
@@ -161,6 +191,11 @@ def build(half):
               pins={"1": "SDA", "2": "+3V3"})
         place("R_0603_1608Metric", "R2", "4k7", 63.0, -3.5,
               pins={"1": "SCL", "2": "+3V3"})
+        # 5V level shifter for WS2812 data (74AHCT1G125, SOT-23-5):
+        # 1=/OE 2=A 3=GND 4=Y 5=VCC.
+        place("SOT-23-5", "U2", "74AHCT1G125", 70.0, -4.0,
+              pins={"1": "GND", "2": "LED_DATA", "3": "GND",
+                    "4": "LED_CH00", "5": "+5V"})
     else:
         # Passive half: MCP23017 in the socket-free strip beside the spacebar.
         place("SOIC-28W_7.5x17.9mm_P1.27mm", "U1", "MCP23017-E/SO", 46.0, 66.5,
@@ -169,6 +204,14 @@ def build(half):
         place("HRO-TYPE-C-31-M-12-Assembly", "J1", "USB-C link", 9.5, -3.5,
               pins=USBC_PINS)
         place("C_0603_1608Metric", "C1", "100nF", 46.0, 56.5,
+              pins={"1": "+3V3", "2": "GND"})
+        # Local 3V3 for the expander from the 5V link (MCP1700-3302,
+        # SOT-23: 1=GND 2=VIN 3=VOUT) + 1uF in/out caps.
+        place("SOT-23", "U2", "MCP1700-3302", 30.0, -4.0,
+              pins={"1": "GND", "2": "+5V", "3": "+3V3"})
+        place("C_0603_1608Metric", "C2", "1uF", 24.0, -4.0,
+              pins={"1": "+5V", "2": "GND"})
+        place("C_0603_1608Metric", "C3", "1uF", 36.0, -4.0,
               pins={"1": "+3V3", "2": "GND"})
 
     # --- edge cuts ---
