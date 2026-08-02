@@ -163,6 +163,35 @@
   li::marker { color: var(--seam); }
   p { max-width: 68ch; }
   .note { color: var(--muted); font-size: 0.85rem; }
+
+  .tabs { display: flex; gap: 0.25rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .tab {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; letter-spacing: 0.1em; text-transform: uppercase;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--muted); padding: 0.55rem 0.9rem; cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--seam); }
+  .tab:focus-visible { outline: 2px solid var(--seam); outline-offset: 2px; }
+  .panel[hidden] { display: none; }
+
+  .stage-wrap { position: relative; }
+  #stage { width: 100%; height: min(58vh, 520px); display: block; touch-action: none; }
+  #m-status {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--muted); font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem;
+    pointer-events: none;
+  }
+  .btn {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+    border-radius: 6px; padding: 0.55rem 1rem; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btn:hover { opacity: 0.85; }
+  .btn:focus-visible { outline: 2px solid var(--seam); outline-offset: 2px; }
 </style>
 
 <main>
@@ -175,6 +204,12 @@
     interlock like puzzle pieces.</p>
   </header>
 
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-layout" role="tab" aria-selected="true" aria-controls="panel-layout">Layout</button>
+    <button class="tab" id="tab-model" role="tab" aria-selected="false" aria-controls="panel-model">3D model</button>
+  </div>
+
+  <div class="panel" id="panel-layout" role="tabpanel">
   <div class="board-card">
     <div class="board-scroll"><svg id="board" xmlns="http://www.w3.org/2000/svg"></svg></div>
     <div class="board-foot">
@@ -186,7 +221,30 @@
       <button id="toggle" aria-pressed="false">Split the halves</button>
     </div>
   </div>
-  <p class="note" style="margin-top:0.75rem"><a href="3d/">Interactive 3D PCB view →</a></p>
+  </div>
+
+  <div class="panel" id="panel-model" role="tabpanel" hidden>
+  <div class="board-card" style="padding:0; overflow:hidden">
+    <div class="stage-wrap">
+      <canvas id="stage"></canvas>
+      <div id="m-status">open this tab to load the models…</div>
+    </div>
+    <div class="board-foot" style="padding:0.9rem 1.1rem; margin-top:0">
+      <span class="note">drag to orbit · scroll to zoom · right-drag to pan</span>
+      <div style="display:flex; gap:0.5rem">
+        <button class="btn" id="m-reset">Reset view</button>
+        <button class="btn" id="m-explode" aria-pressed="true">Assemble the stack</button>
+        <button class="btn primary" id="m-toggle" aria-pressed="false">Split the halves</button>
+      </div>
+    </div>
+  </div>
+  <p class="note" style="margin-top:0.75rem">Rev A assembly — bottom case
+  (magnet-bearing docking skirt at the seam), unrouted PCBs (one Pi Pico on
+  the left, MCP23017 expander on the passive right, USB-C link carrying I2C
+  + the 43-LED chain), gasket-mounted plate with anti-curl skirt, and the
+  C-shaped top frame, open at the seam so the halves dock flush. Generated
+  from <code>design/gemini/pcb/</code> and <code>design/gemini/case/</code>.</p>
+  </div>
 
   <h2>Seam geometry</h2>
   <div class="table-scroll"><table>
@@ -317,6 +375,154 @@
     btn.textContent = split ? 'Dock the halves' : 'Split the halves';
     btn.setAttribute('aria-pressed', String(split));
   });
+</script>
+
+<script type="importmap">
+{ "imports": { "three": "../vendor/three/three.module.min.js" } }
+</script>
+<script type="module">
+const tabs = { layout: document.getElementById('tab-layout'), model: document.getElementById('tab-model') };
+const panels = { layout: document.getElementById('panel-layout'), model: document.getElementById('panel-model') };
+let modelInit = false;
+
+function show(which) {
+  for (const k of Object.keys(tabs)) {
+    tabs[k].setAttribute('aria-selected', String(k === which));
+    panels[k].hidden = k !== which;
+  }
+  if (which === 'model' && !modelInit) { modelInit = true; initModel(); }
+  history.replaceState(null, '', which === 'model' ? '#model' : location.pathname);
+}
+tabs.layout.addEventListener('click', () => show('layout'));
+tabs.model.addEventListener('click', () => show('model'));
+if (location.hash === '#model') show('model');
+
+async function initModel() {
+  const status = document.getElementById('m-status');
+  status.textContent = 'loading models…';
+  const THREE = await import('three');
+  const [{ GLTFLoader }, { OrbitControls }, { MeshoptDecoder }] = await Promise.all([
+    import('../vendor/three/GLTFLoader.js'),
+    import('../vendor/three/OrbitControls.js'),
+    import('../vendor/three/meshopt_decoder.module.js'),
+  ]);
+
+  const canvas = document.getElementById('stage');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x555544, 2.4));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(1, 2, 1.5);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.8); fill.position.set(-1.5, -1, -1);
+  scene.add(key, fill);
+  const camera = new THREE.PerspectiveCamera(40, 2, 0.001, 10);
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const load = url => new Promise((res, rej) => loader.load(url, g => res(g.scene), undefined, rej));
+
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const splitDir = new THREE.Vector3(1, 0, 0);
+  let halves = null, split = 0, splitTarget = 0, explode = 1, explodeTarget = 1;
+  const SPLIT_MM = 0.022;
+  const EXPLODE = { bottom: -0.022, board: 0, plate: 0.020, top: 0.036 };
+  const pieces = [];
+  let homeBox = null;
+
+  function frame(box) {
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3()).length();
+    camera.position.copy(center).add(new THREE.Vector3(0.35, 0.8, 0.9).multiplyScalar(size));
+    camera.near = size / 100; camera.far = size * 10;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.update();
+  }
+
+  function normalizeCase(caseScene) {
+    let box = new THREE.Box3().setFromObject(caseScene);
+    const size = box.getSize(new THREE.Vector3());
+    if (Math.max(size.x, size.y, size.z) > 1) caseScene.scale.setScalar(0.001);
+    box = new THREE.Box3().setFromObject(caseScene);
+    box.getSize(size);
+    if (size.y > size.z) caseScene.rotation.x = -Math.PI / 2; // Z-up -> Y-up
+  }
+
+  function registerPieces(root, kind) {
+    const names = kind === 'board' ? null : ['bottom', 'plate', 'top'];
+    const targets = [];
+    if (names) root.traverse(o => { if (names.includes(o.name)) targets.push(o); });
+    if (!targets.length) targets.push(root);
+    for (const obj of targets) {
+      const k = names ? obj.name : 'board';
+      obj.updateWorldMatrix(true, false);
+      const inv = new THREE.Matrix4().extractRotation(
+        (obj.parent ? obj.parent.matrixWorld : obj.matrixWorld)).invert();
+      const up = new THREE.Vector3(0, 1, 0).applyMatrix4(inv).normalize();
+      pieces.push({ obj, kind: k, base: obj.position.clone(), up,
+                    scale: obj.parent === null ? 1 : obj.getWorldScale(new THREE.Vector3()).x });
+    }
+  }
+
+  try {
+    const [boardL, boardR, caseL, caseR] = await Promise.all([
+      load('3d/gemini-left.glb'), load('3d/gemini-right.glb'),
+      load('3d/gemini_left_case.glb'), load('3d/gemini_right_case.glb'),
+    ]);
+    normalizeCase(caseL); normalizeCase(caseR);
+    const left = new THREE.Group(); left.add(boardL, caseL);
+    const right = new THREE.Group(); right.add(boardR, caseR);
+    scene.add(left, right);
+    halves = { left, right };
+    registerPieces(boardL, 'board'); registerPieces(boardR, 'board');
+    registerPieces(caseL, 'case'); registerPieces(caseR, 'case');
+    homeBox = new THREE.Box3(
+      new THREE.Vector3(-0.1275, -0.036, -0.0125),
+      new THREE.Vector3(0.1325, 0.050, 0.0805),
+    );
+    frame(homeBox);
+    status.remove();
+  } catch (err) {
+    status.textContent = 'failed to load models — see console';
+    console.error(err);
+    return;
+  }
+
+  document.getElementById('m-toggle').addEventListener('click', e => {
+    splitTarget = splitTarget ? 0 : 1;
+    e.target.textContent = splitTarget ? 'Dock the halves' : 'Split the halves';
+    e.target.setAttribute('aria-pressed', String(!!splitTarget));
+  });
+  document.getElementById('m-explode').addEventListener('click', e => {
+    explodeTarget = explodeTarget ? 0 : 1;
+    e.target.textContent = explodeTarget ? 'Assemble the stack' : 'Explode the stack';
+    e.target.setAttribute('aria-pressed', String(!!explodeTarget));
+  });
+  document.getElementById('m-reset').addEventListener('click', () => homeBox && frame(homeBox));
+
+  renderer.setAnimationLoop(() => {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return; // tab hidden
+    if (canvas.width !== w * renderer.getPixelRatio()) {
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    split = reduceMotion ? splitTarget : split + (splitTarget - split) * 0.08;
+    explode = reduceMotion ? explodeTarget : explode + (explodeTarget - explode) * 0.08;
+    const off = split * SPLIT_MM / 2;
+    halves.left.position.copy(splitDir).multiplyScalar(-off);
+    halves.right.position.copy(splitDir).multiplyScalar(off);
+    for (const p of pieces) {
+      const lift = explode * EXPLODE[p.kind] / p.scale;
+      p.obj.position.copy(p.base).addScaledVector(p.up, lift);
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  });
+}
 </script>
 </body>
 </html>

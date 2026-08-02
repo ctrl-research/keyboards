@@ -37,8 +37,9 @@ link wiring, socket-DNP keys and BOM: [`pinmap.md`](pinmap.md).
 
 ## 3D exports
 
-`docs/gemini/3d/` on the Pages site renders both boards docked/split
-(three.js). Re-export after board changes:
+The docs page's **3D model tab** (`docs/gemini/#model`) renders the full
+assembly — boards + case pieces, docked/split and exploded/assembled
+(three.js; GLBs live in `docs/gemini/3d/`). Re-export after board changes:
 
 ```
 kicad-cli pcb export glb --subst-models --include-tracks --include-pads \
