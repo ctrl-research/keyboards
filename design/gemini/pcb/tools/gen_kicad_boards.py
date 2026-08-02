@@ -3,7 +3,9 @@
 
 Architecture (rev A): ONE Raspberry Pi Pico on the left half; the right half
 is passive with an MCP23017 I/O expander. Halves link over USB-C carrying
-I2C (VBUS=3V3, D+=SDA, D-=SCL) — any USB 2.0 C-to-C cable works.
+I2C + LED data (VBUS=VSYS ~5V, D+=SDA, D-=SCL, CC=WS2812 chain) — any
+basic non-e-marked USB 2.0 C-to-C cable works. The left half also has a
+host USB-C (J2) as an alternative to the Pico onboard port.
 
 Run with KiCad's bundled python3 (needs pcbnew). Produces per half:
   pcb/gemini-<half>/gemini-<half>.kicad_pcb  - footprints placed + netlisted
@@ -58,7 +60,10 @@ PICO_PINS = {
     "3": "GND", "8": "GND", "13": "GND", "18": "GND", "23": "GND",
     "28": "GND", "33": "GND", "38": "GND", "42": "GND",
     "36": "+3V3",
-    "40": "+5V",        # VBUS: powers the LED chains + right half via link
+    # VSYS is the 5V-ish power rail (LEDs, link, right half). It is fed by
+    # EITHER the Pico's onboard USB (module-internal schottky VBUS->VSYS)
+    # OR the J2 host USB-C via DV1 — diode-ORed, safe to plug both.
+    "39": "VSYS",
 }
 
 # MCP23017 SOIC-28 pin -> net (right half only).
@@ -80,7 +85,7 @@ MCP_PINS = {
 # an e-marker chip would load the CC line. VERIFY pad map vs datasheet.
 USBC_PINS = {
     "1": "GND", "12": "GND", "13": "GND",
-    "2": "+5V", "11": "+5V",
+    "2": "VSYS", "11": "VSYS",
     "6": "SDA", "7": "SDA",   # D+ (A6/B6)
     "5": "SCL", "8": "SCL",   # D- (A7/B7)
     "3": "LED_LINK", "4": "LED_LINK", "9": "LED_LINK", "10": "LED_LINK",
@@ -171,7 +176,7 @@ def build(half):
         if half == "right" and i == n_leds - 1:
             dout = "LED_END"
         place(LED_FP, f"LED{r}{c}", "SK6812MINI-E", cx, cy + LED_OFFSET_Y,
-              back=True, pins={"1": "+5V", "2": dout, "3": "GND", "4": din})
+              back=True, pins={"1": "VSYS", "2": dout, "3": "GND", "4": din})
         if w in STAB_FP:
             place(STAB_FP[w], f"ST_SW{r}{c}", f"stab {w}u", cx, cy, back=False)
 
@@ -195,7 +200,32 @@ def build(half):
         # 1=/OE 2=A 3=GND 4=Y 5=VCC.
         place("SOT-23-5", "U2", "74AHCT1G125", 70.0, -4.0,
               pins={"1": "GND", "2": "LED_DATA", "3": "GND",
-                    "4": "LED_CH00", "5": "+5V"})
+                    "4": "LED_CH00", "5": "VSYS"})
+        # J2: host USB-C in the brow — alternative to the Pico's onboard
+        # port. Device-role CC pulldowns (R3/R4), VBUS diode-ORed into VSYS
+        # (DV1) per the Pico datasheet. D+/D- run to TP pads beside the
+        # module: jumper them to the Pico's underside TP3/TP2 (short wires
+        # or spring pins) — USB data is NOT on the 40-pin header.
+        place("HRO-TYPE-C-31-M-12-Assembly", "J2", "USB-C host", 88.0, -3.5,
+              pins={"1": "GND", "12": "GND", "13": "GND",
+                    "2": "VBUS_HOST", "11": "VBUS_HOST",
+                    "6": "USB_DP", "7": "USB_DP",
+                    "5": "USB_DM", "8": "USB_DM",
+                    "4": "CC1", "9": "CC2"})
+        place("R_0603_1608Metric", "R3", "5k1", 81.0, -1.0,
+              pins={"1": "CC1", "2": "GND"})
+        place("R_0603_1608Metric", "R4", "5k1", 95.0, -1.0,
+              pins={"1": "CC2", "2": "GND"})
+        place("D_SOD-123", "DV1", "B5819W", 100.0, -4.0, rot=180,
+              pins={"1": "VSYS", "2": "VBUS_HOST"})  # cathode -> VSYS
+        # Wire-jumper targets for the Pico's underside USB test points
+        # (TP3=D+, TP2=D-), in the brow near the module's USB end. Routing
+        # phase may move them directly under the exact TP positions for
+        # spring-pin mounting instead of wires.
+        place("TestPoint_THTPad_D1.5mm_Drill0.7mm", "TP1", "USB_DP",
+              5.0, -1.5, pins={"1": "USB_DP"})
+        place("TestPoint_THTPad_D1.5mm_Drill0.7mm", "TP2", "USB_DM",
+              10.0, -1.5, pins={"1": "USB_DM"})
     else:
         # Passive half: MCP23017 in the socket-free strip beside the spacebar.
         place("SOIC-28W_7.5x17.9mm_P1.27mm", "U1", "MCP23017-E/SO", 46.0, 66.5,
@@ -208,9 +238,9 @@ def build(half):
         # Local 3V3 for the expander from the 5V link (MCP1700-3302,
         # SOT-23: 1=GND 2=VIN 3=VOUT) + 1uF in/out caps.
         place("SOT-23", "U2", "MCP1700-3302", 30.0, -4.0,
-              pins={"1": "GND", "2": "+5V", "3": "+3V3"})
+              pins={"1": "GND", "2": "VSYS", "3": "+3V3"})
         place("C_0603_1608Metric", "C2", "1uF", 24.0, -4.0,
-              pins={"1": "+5V", "2": "GND"})
+              pins={"1": "VSYS", "2": "GND"})
         place("C_0603_1608Metric", "C3", "1uF", 36.0, -4.0,
               pins={"1": "+3V3", "2": "GND"})
 

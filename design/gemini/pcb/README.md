@@ -56,6 +56,8 @@ npx gltfpack -i raw-left.glb -o docs/gemini/3d/gemini-left.glb -cc -mi -si 0.4 -
 - [ ] Verify HRO USB-C pad↔pin mapping against the datasheet (incl. which
       pads are CC vs SBU — the LED chain crosses on CC)
 - [ ] Verify SK6812 MINI-E pad order (assumed 1=VDD 2=DOUT 3=VSS 4=DIN)
+- [ ] Host port TP1/TP2 pads: bridge to Pico underside TP3 (D+) / TP2 (D−)
+      — decide jumper wires vs relocating pads under the TPs for spring pins
 - [ ] Series resistors on link D± so a real charger/host can't hurt anything
 - [ ] QMK: cap `RGB_MATRIX_MAXIMUM_BRIGHTNESS` (~120) — 43 LEDs at full
       white would far exceed a 500 mA USB 2.0 budget

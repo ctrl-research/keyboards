@@ -36,6 +36,24 @@ hotswap socket. The case gets a ~5 mm pocket along this strip (elsewhere
 Unused GPIOs break out to labeled test pads (encoder, pogo dock
 detect — future).
 
+## Host USB-C port (J2, left half, in the brow)
+
+Alternative to the Pico's onboard micro-USB (which sits mid-board at the
+side edge — usable but awkward for a desk cable). Proper device-role port:
+
+- **CC1/CC2**: separate 5.1 kΩ pulldowns (R3/R4) so C-to-C cables and hosts
+  supply VBUS.
+- **VBUS → VSYS** through Schottky DV1 (B5819W), diode-ORed against the
+  Pico's internal VBUS→VSYS diode — safe with both cables plugged, per the
+  Pico datasheet's dual-power pattern.
+- **D+/D−**: the Pico exposes USB data only on underside test points, not
+  the header. J2's D± route to two pads (TP1/TP2) in the brow next to the
+  module's USB end — bridge to the Pico's **TP3 (D+) / TP2 (D−)** with two
+  short jumper wires at assembly (or relocate the pads under the exact TP
+  positions for spring pins during routing).
+- Everything downstream (LEDs, link, right half) runs off **VSYS**
+  (~4.7 V after the diode) — works identically from either port.
+
 ## Right half — MCP23017-E/SO (U1, SOIC-28)
 
 | MCP pin | Signal   | Function              |
@@ -100,7 +118,9 @@ the standoff (see above).
 | 1   | MCP23017-E/SO (SOIC-28)                  |
 | 1   | 74AHCT1G125 SOT-23-5 (LED level shift)   |
 | 1   | MCP1700-3302 SOT-23 (right 3V3 LDO)      |
-| 2   | HRO TYPE-C-31-M-12 USB-C receptacle      |
+| 1   | B5819W SOD-123 Schottky (host VBUS OR)   |
+| 3   | HRO TYPE-C-31-M-12 USB-C receptacle      |
+| 2   | 5.1 kΩ 0603 (host port CC pulldowns)     |
 | 43  | SK6812 MINI-E (reverse mount RGB)        |
 | 43  | 1N4148W SOD-123                          |
 | 43  | Kailh MX hotswap socket                  |
