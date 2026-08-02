@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 9)
+  (lib (name "gemini")(type "KiCad")(uri "${KIPRJMOD}/../lib/gemini.pretty")(options "")(descr "Gemini vendored footprints"))
+)

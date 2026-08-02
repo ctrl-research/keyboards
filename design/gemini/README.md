@@ -5,7 +5,8 @@ staggered 40%. Two boards, one keyboard — hence Gemini (and it's a *mini*).
 
 ## Concept
 
-- Each half is a standalone wired/split keyboard half with its own controller.
+- One Raspberry Pi Pico drives the whole board from the left half; the right
+  half is passive (I/O expander) and links over a USB-C cable carrying I2C.
 - Apart: a classic two-piece ergo split you can tent and shoulder-width.
 - Docked: the halves mate along a staggered seam and become a conventional
   12.75u × 4u 40% (MiniVan-class footprint), visually indistinguishable from a
@@ -52,11 +53,15 @@ hooks under the left half's row 3 — a natural mechanical interlock.
 
 ### Dimensions (1u = 19.05 mm)
 
-| Piece       | Width               | Height        |
-|-------------|---------------------|---------------|
-| Docked      | 12.75u = 242.9 mm   | 4u = 76.2 mm  |
-| Left half   | 6.25–6.75u = 119.1–128.6 mm | 4u    |
-| Right half  | 6.00–6.50u = 114.3–123.8 mm | 4u    |
+| Piece       | Width               | Depth                  |
+|-------------|---------------------|------------------------|
+| Docked      | 12.75u = 242.9 mm   | 4u + 8 mm brow = 84.2 mm |
+| Left half   | 6.25–6.75u = 119.1–128.6 mm | 84.2 mm        |
+| Right half  | 6.00–6.50u = 114.3–123.8 mm | 84.2 mm        |
+
+The 8 mm rear "brow" above row 0 hosts the USB-C link ports (and the
+Pico's micro-USB reach); the seam runs straight through it at 6.25u. The
+key field itself stays exactly 4u deep.
 
 (Plus case wall thickness on the non-seam edges; the seam faces should sit
 flush metal-to-metal / plastic-to-plastic.)
@@ -68,32 +73,29 @@ flush metal-to-metal / plastic-to-plastic.)
 - **Retention**: 4–6 pairs of 5×2 mm neodymium magnets embedded in the seam
   faces (polarity keyed so the halves only mate the correct way).
 - **Electrical**:
-  - Primary: TRRS or 4-pin JST between halves (works docked *and* split — one
-    short jumper when docked, a long cable when split).
-  - Stretch goal: spring-loaded pogo pins in the row-2/3 seam faces so docking
-    needs no cable at all; TRRS remains the split-mode link.
-- **Controllers**: one per half (RP2040 class, e.g. Sea-Picro / Elite-Pi
-  footprint), USB-C on each half's rear edge. Left is default master; QMK
-  `SPLIT_USB_DETECT` so either side can take USB.
+  - One controller: a Raspberry Pi Pico on the left half (header-mounted on
+    the back); the right half is passive with an MCP23017 I/O expander.
+  - Halves link over **USB-C carrying I2C** (3V3/SDA/SCL/GND) — any USB 2.0
+    C-to-C cable, orientation-proof. Works docked and split.
+  - Stretch goal: spring-loaded pogo pins in the row-2/3 seam faces carrying
+    the same 4 signals so docking needs no cable at all.
+  - Details: [`pcb/pinmap.md`](pcb/pinmap.md).
 
 ## Matrix
 
-Both halves are electrically 4×6:
+Both halves are electrically 4×6 (left scanned by the Pico, right read over
+I2C via the expander):
 
 | Half  | R1        | R2        | R3        | R4                    |
 |-------|-----------|-----------|-----------|------------------------|
 | Left  | 6 keys    | 6 keys    | 6 keys    | 4 keys (2 cols unused) |
 | Right | 6 keys    | 6 keys    | 5 keys    | 4 keys                 |
 
-## Default keymap sketch
+## Default keymap
 
-Base layer as shown above. `/` lives on Fn+`.`, quote on Fn+`;` (MiniVan
-conventions). Two Fn-style layers off the right `Fn` key and dual-role left
-`Space` (hold) to be tuned later:
-
-- **Fn (Raise)**: numbers on row 1, symbols on row 2, arrows on `HJKL`… or
-  `IJKL` — TBD.
-- **Lower**: F-keys, media, RGB/board controls.
+See [`layout/keymap.md`](layout/keymap.md) — Base + Raise (hold right `Fn`)
++ Lower (hold left `Space`) + Adjust, MiniVan conventions, vim arrows on
+`HJKL`, full 104-key coverage.
 
 ## Keycap compatibility
 
@@ -103,11 +105,15 @@ All sizes are standard: 1u, 1.25u, 1.5u, 1.75u, 2u, 2.75u. Notes:
   profiles (DSA/XDA/KAT uniform); sculpted sets will have R2 shift profile.
 - 1.25u Enter is a standard size but a rare legend; blanks or novelty caps.
 
-## Files
+## Project structure
 
-- `gemini_docked.kle.json` — docked layout, importable at
-  keyboard-layout-editor.com (halves color-coded).
-- `gemini_split.kle.json` — same layout with the halves separated 0.75u.
+- [`layout/`](layout/) — KLE layouts (docked + split, importable at
+  keyboard-layout-editor.com) and the default keymap layer maps; VIA
+  definition lands here too.
+- [`pcb/`](pcb/) — KiCad projects for both halves.
+- [`case/`](case/) — 3D-printed case CAD + STL/STEP exports.
+- [`firmware/`](firmware/) — QMK keyboard definition, VIA support, built
+  `.uf2` images.
 
 ## Open questions
 
