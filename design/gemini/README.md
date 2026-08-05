@@ -51,6 +51,10 @@ Rows 1–3 step 0.25u right per row (following the alpha stagger); row 4 steps
 back to 6.25 at the split spacebars, giving the right half a 0.5u tooth that
 hooks under the left half's row 3 — a natural mechanical interlock.
 
+The PCBs and plates are inset 1.45 mm from this boundary; the **case seam
+walls** sit exactly on it and are what actually mate (with embedded
+magnets) when the halves dock. See [`case/README.md`](case/README.md).
+
 ### Dimensions (1u = 19.05 mm)
 
 | Piece       | Width               | Depth                  |

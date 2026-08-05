@@ -13,6 +13,15 @@ link wiring, socket-DNP keys and BOM: [`pinmap.md`](pinmap.md).
 - [`gemini-left/`](gemini-left/), [`gemini-right/`](gemini-right/) —
   generated `.kicad_pcb` per half: all footprints placed, nets assigned,
   seam edge cuts drawn. **Unrouted** — routing is interactive work.
+- [`gemini-panel/`](gemini-panel/) — **production panel** for JLCPCB/PCBWay:
+  both halves in one board, joined along their straight *outer* edges at
+  x = 0 with a single **V-score** snap line (the stepped seam can't be
+  V-scored — it faces outward and is routed normally). Refs and nets are
+  prefixed `L_`/`R_`. Route the individual halves first, then regenerate —
+  or route the panel directly and it supersedes them. When ordering: pick
+  "panel by customer", 2 designs, and note "V-cut where marked" in remarks.
+  Snapped V-score edges land inside the case (the seam-inset walls cover
+  all board edges), so no cosmetic cleanup matters.
 - Regenerate with KiCad's bundled python (wx workaround included):
 
   ```
@@ -26,8 +35,9 @@ link wiring, socket-DNP keys and BOM: [`pinmap.md`](pinmap.md).
 - [`placement/*_placement.csv`](placement/) — switch centers in mm with
   matrix row/col (per-half origin at its top-left corner).
 - [`placement/*_outline.csv`](placement/) — Edge.Cuts vertices in mm
-  including the stepped docking seam and the 8 mm rear brow (link ports
-  live there). Left ≤ 128.59 × 84.2 mm, right ≤ 123.83 × 84.2 mm.
+  including the stepped docking seam (inset 1.45 mm from the key boundary —
+  the case seam wall carries the true boundary) and the 8 mm rear brow
+  (link ports live there). Left ≤ 127.14 × 84.2 mm, right ≤ 122.38 × 84.2 mm.
 - [`kbplacer/*_matrix.kle.json`](kbplacer/) — KLE annotated with `row,col`
   legends for the [kbplacer](https://github.com/adamws/kicad-kbplacer)
   plugin.
@@ -53,7 +63,10 @@ npx gltfpack -i raw-left.glb -o docs/gemini/3d/gemini-left.glb -cc -mi -si 0.4 -
 
 ## Before fab (rev A checklist)
 
-- [ ] Route both boards (kbplacer placements + seam edge cuts are done)
+- [x] Route both boards (autorouted + USB-C escapes rebuilt by hand: the
+      generated nested stitch fenced the inner nets on B.Cu, so each link
+      /host connector now fans out through 0.6/0.3 vias to F.Cu; DRC: 0
+      unconnected on both halves and the panel)
 - [ ] Verify HRO USB-C pad↔pin mapping against the datasheet (incl. which
       pads are CC vs SBU — the LED chain crosses on CC)
 - [ ] Verify SK6812 MINI-E pad order (assumed 1=VDD 2=DOUT 3=VSS 4=DIN)

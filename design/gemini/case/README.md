@@ -22,21 +22,24 @@ flange, on all edges **except the seam edge**.
 
 ## The seam edge (docking side)
 
-Nothing may protrude past the seam plane above PCB level, or the halves
-couldn't dock flush. So:
+The PCB and plate stop **1.45 mm short** of the true key-boundary seam
+(`SEAM_INSET_MM` in `pcb/tools/gen_pcb_data.py`), which buys room for a
+proper case wall on the joining side:
 
-- **Bottom case**: seam wall rises only to z = 4.0 (under the PCB, clear of
-  the near-seam hotswap sockets), 3 mm thick *inward*, outer face exactly on
-  the seam plane. It carries 4 × Ø3×2 mm magnet pockets (axis horizontal,
-  z = 2) whose positions mirror across the halves; polarity alternates N/S
-  along the seam so the halves only dock in the correct alignment.
-- **Plate and PCB**: extend flush to the seam plane; their edges are the
-  visible seam when docked. No gasket on this edge (the plate flange stops).
-- **Top case**: C-shaped — open on the seam side, zero material past the
-  seam plane.
+- **Bottom case**: full-height 1.2 mm seam wall whose *outer face sits
+  exactly on the boundary* — the case walls, not the board edges, carry the
+  stepped interlock and are what touch when docked. Below z = 4 the wall
+  thickens inward to 2.45 mm to hold 4 × Ø3×2 mm magnet pockets (axis
+  horizontal, z = 2); positions mirror across halves, polarity alternates
+  N/S so the halves only dock in the correct alignment.
+- **Plate and PCB**: recessed 1.45 mm behind the seam wall, fully covered
+  from the side. No gasket on this edge (the plate flange stops).
+- **Top case**: still open above the rim on the seam side of the key field
+  (pressed caps sweep that space), but its rear band roofs the brow all the
+  way to the seam plane — the two brow roofs meet when docked.
 
-Docked appearance: caps keep near-normal spacing; below them the two plate
-edges and case skirts meet at the stepped seam line.
+Docked appearance: caps keep near-normal spacing; beneath them the two
+seam walls meet as a clean stepped line, ~2.4 mm of case material total.
 
 ## Pieces (× left/right)
 

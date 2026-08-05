@@ -20,13 +20,14 @@ PCB = os.path.join(os.path.dirname(CASE), "pcb", "placement")
 
 P = dict(
     clear=0.25,          # PCB outline -> cavity wall
-    seam_inset=1.45,     # PCB stops this short of the true boundary; the
-                         # case outer face sits ON the boundary -> the seam
-                         # wall is (1.45 - 0.25) = 1.2 mm, full height
+    seam_inset={"left": 1.45, "right": 0.75},
+                         # PCB stops this short of the true boundary; the
+                         # case outer face sits ON the boundary. Asymmetric:
+                         # right-half socket pads reach closer to the seam.
     seam_plate=0.05,     # plate edge clearance beyond the (inset) outline
     wall=4.25,           # PCB outline -> case outer face (non-seam)
     floor=3.0,
-    mag_base_in=1.0,     # below z4 the seam wall thickens inward for magnets
+    mag_base_in={"left": 1.0, "right": 1.7},  # seam wall base: 2.45 mm total for magnet pockets
     mag_base_top=4.0,
     pcb_bottom=6.0,
     ledge_z=10.1,        # lower gasket shelf
@@ -129,8 +130,8 @@ def zcyl(x, y, z0, z1, d):
 
 def bottom_case(half, outline):
     o = P
-    outer = offset_poly(outline, half, o["wall"], o["seam_inset"])
-    cav_low = offset_poly(outline, half, o["clear"], -o["mag_base_in"])
+    outer = offset_poly(outline, half, o["wall"], o["seam_inset"][half])
+    cav_low = offset_poly(outline, half, o["clear"], -o["mag_base_in"][half])
     cav_mid = offset_poly(outline, half, o["clear"], o["clear"])
     cav_top = offset_poly(outline, half, o["plate_pocket"], o["clear"])
 
@@ -155,7 +156,7 @@ def bottom_case(half, outline):
         body = body.cut(rear_port(9.5))        # host USB-C
         body = body.cut(rear_port(110.0))      # link USB-C
         # Pico micro-USB out the left side wall (z 0.1-4.0)
-        body = body.cut(box(-o["wall"] - 1, 1.0, 28.575 - 5.0, 28.575 + 5.0, 0.1, 4.0))
+        body = body.cut(box(-o["wall"] - 1, 1.0, 27.575 - 5.0, 27.575 + 5.0, 0.1, 4.0))
         # BOOTSEL access through the floor
         body = body.cut(zcyl(32.0, 28.575, -o["floor"] - 1, 0.5, 8.0))
     else:
@@ -226,7 +227,7 @@ def top_case(half, outline):
     o = P
     # The bezel opening hugs the key field only — the brow is roofed over.
     field = [(x, max(y, 0.0)) for x, y in outline]
-    outer = offset_poly(outline, half, o["wall"], o["seam_inset"])
+    outer = offset_poly(outline, half, o["wall"], o["seam_inset"][half])
     opening = offset_poly(field, half, o["bezel_gap"], 3.0)     # open at seam
     pocket = offset_poly(outline, half, o["plate_pocket"], o["clear"])
 
