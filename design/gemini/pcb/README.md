@@ -44,6 +44,16 @@ link wiring, socket-DNP keys and BOM: [`pinmap.md`](pinmap.md).
 - [`lib/gemini.pretty`](lib/) — vendored footprints (marbastlib hotswap +
   stabs, Pico, HRO USB-C, MCP23017/passives from KiCad stock) and 3D
   models; licenses in `lib/licenses/`.
+- [`gemini.kicad_mod`](gemini.kicad_mod) — source logo artwork from
+  bitmap2component (35.9 × 13.9 mm). [`tools/gen_logo_fp.py`](tools/)
+  scales it to 6 mm tall and writes `lib/gemini.pretty/Logo_Gemini.kicad_mod`
+  with its origin at the artwork centre; the board generator places that
+  on **F.SilkS**, centred in the 8 mm rear brow (left x 58.81, right
+  x 62.29, both at y −4). The brow's *back* face is full of ports and
+  passives, so the front face is where the room is. 6 mm is the practical
+  floor for the small "by: j6n" glyphs: it keeps the thinnest stroke at
+  0.40 mm and the tightest enclosed counter at 0.22 mm, versus the
+  0.15 mm silkscreen minimum JLCPCB/PCBWay quote.
 
 ## 3D exports
 
@@ -53,13 +63,15 @@ assembly — boards + case pieces, docked/split and exploded/assembled
 
 ```
 kicad-cli pcb export glb --subst-models --include-tracks --include-pads \
-  --include-zones --user-origin 119.0625x0mm \
+  --include-zones --include-silkscreen --user-origin 119.0625x0mm \
   -o raw-left.glb gemini-left/gemini-left.kicad_pcb   # right: no origin arg
 npx gltfpack -i raw-left.glb -o docs/gemini/3d/gemini-left.glb -cc -mi -si 0.4 -noq
 ```
 
 (The +119.0625 mm origin shift puts both halves in one docked frame.
-`-noq` matters: quantized output renders at the wrong scale in the viewer.)
+`-noq` matters: quantized output renders at the wrong scale in the viewer.
+`--include-silkscreen` costs ~4 % file size and is what makes the brow
+logo and the reference designators show up in the viewer.)
 
 ## Before fab (rev A checklist)
 

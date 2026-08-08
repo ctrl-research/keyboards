@@ -1,0 +1,20 @@
+# macOS Finder metadata — per-machine, regenerated constantly
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# KiCad transients — written when a project is opened or edited, and
+# reproducible. Board/schematic/footprint sources are tracked as normal.
+# .kicad_prl is per-user local UI state (zoom, layer visibility, filters);
+# .kicad_pro carries the shared project settings and stays tracked.
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.lck
+_autosave-*
+*.kicad_pcb-bak
+*.kicad_sch-bak

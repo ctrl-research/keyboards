@@ -390,6 +390,16 @@ def populate(board, half, prefix="", dx=0.0):
         place("C_0603_1608Metric", "C3", "1uF", 36.0, -4.0,
               pins={"1": "+3V3", "2": "GND"})
 
+    # --- silkscreen logo, front side, centred in the 8 mm rear brow ---
+    # F.SilkS because the brow's back face carries the link/host ports and
+    # the passives; the front face is otherwise bare there. The 6 mm-tall
+    # footprint is baked from ../gemini.kicad_mod by tools/gen_logo_fp.py.
+    outline = read_outline(half)
+    ytop = min(y for _, y in outline)
+    brow_x = [x for x, y in outline if y == ytop]
+    place("Logo_Gemini", "G1", "Logo_Gemini",
+          (min(brow_x) + max(brow_x)) / 2, ytop / 2, back=False)
+
 
 def draw_edges(board, verts):
     for (x1, y1), (x2, y2) in zip(verts, verts[1:] + verts[:1]):

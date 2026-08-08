@@ -192,6 +192,42 @@
   .btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   .btn:hover { opacity: 0.85; }
   .btn:focus-visible { outline: 2px solid var(--seam); outline-offset: 2px; }
+
+  .layer-legend {
+    position: absolute; top: 0.85rem; left: 0.85rem; z-index: 2;
+    display: flex; flex-direction: column; align-items: stretch; gap: 0.3rem;
+    padding: 0.6rem 0.65rem;
+    border: 1px solid var(--border); border-radius: 9px;
+    background: var(--surface);
+    background: color-mix(in srgb, var(--surface) 84%, transparent);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .layer-legend > .lbl {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.65rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 0.15rem 0.2rem;
+  }
+  .chip {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.73rem; letter-spacing: 0.04em; text-align: left;
+    border: 1px solid transparent; border-radius: 6px;
+    padding: 0.34rem 0.5rem; background: transparent; color: var(--muted);
+    cursor: pointer;
+  }
+  .chip > i {
+    width: 10px; height: 10px; border-radius: 3px; flex: none;
+    border: 1px solid currentColor; background: transparent;
+  }
+  .chip[aria-pressed="true"] { color: var(--ink); }
+  .chip[aria-pressed="true"] > i { background: currentColor; }
+  .chip:hover:not([disabled]) { border-color: var(--border); }
+  .chip:focus-visible { outline: 2px solid var(--seam); outline-offset: 1px; }
+  .chip[disabled] { opacity: 0.4; cursor: default; }
+  @media (max-width: 480px) {
+    .layer-legend { top: 0.5rem; left: 0.5rem; padding: 0.45rem 0.5rem; }
+    .chip { font-size: 0.68rem; padding: 0.28rem 0.4rem; }
+  }
 </style>
 
 <main>
@@ -227,6 +263,13 @@
   <div class="board-card" style="padding:0; overflow:hidden">
     <div class="stage-wrap">
       <canvas id="stage"></canvas>
+      <div class="layer-legend" role="group" aria-label="Layer visibility">
+        <span class="lbl">Layers</span>
+        <button class="chip" data-layer="top" aria-pressed="true" disabled><i></i>Top case</button>
+        <button class="chip" data-layer="plate" aria-pressed="true" disabled><i></i>Switch plate</button>
+        <button class="chip" data-layer="board" aria-pressed="true" disabled><i></i>PCB</button>
+        <button class="chip" data-layer="bottom" aria-pressed="true" disabled><i></i>Bottom case</button>
+      </div>
       <div id="m-status">open this tab to load the models…</div>
     </div>
     <div class="board-foot" style="padding:0.9rem 1.1rem; margin-top:0">
@@ -240,11 +283,13 @@
   </div>
   <p class="note" style="margin-top:0.75rem">Rev A assembly — bottom case
   with full-height magnet-bearing seam walls (the walls, not the board
-  edges, mate when docked), unrouted PCBs (one Pi Pico on the left,
+  edges, mate when docked), routed PCBs (one Pi Pico on the left,
   MCP23017 expander on the passive right, USB-C link carrying I2C + the
   43-LED chain), gasket-mounted plate with anti-curl skirt, and the top
-  frame roofing the rear brow, open above the key-field seam. Generated
-  from <code>design/gemini/pcb/</code> and <code>design/gemini/case/</code>.</p>
+  frame roofing the rear brow, open above the key-field seam. Use the
+  layer legend to peel the stack back — hiding the top case and plate
+  exposes the boards. Generated from <code>design/gemini/pcb/</code> and
+  <code>design/gemini/case/</code>.</p>
   </div>
 
   <h2>Seam geometry</h2>
@@ -502,6 +547,22 @@ async function initModel() {
     e.target.setAttribute('aria-pressed', String(!!explodeTarget));
   });
   document.getElementById('m-reset').addEventListener('click', () => homeBox && frame(homeBox));
+
+  // Per-layer visibility. `pieces` is already grouped by kind for the
+  // explode animation, so the same keys drive the chips.
+  const shown = { top: true, plate: true, board: true, bottom: true };
+  for (const chip of document.querySelectorAll('.chip[data-layer]')) {
+    const kind = chip.dataset.layer;
+    if (!pieces.some(p => p.kind === kind)) continue;  // nothing loaded for it
+    chip.disabled = false;
+    chip.addEventListener('click', () => {
+      shown[kind] = !shown[kind];
+      chip.setAttribute('aria-pressed', String(shown[kind]));
+      for (const p of pieces) {
+        if (p.kind === kind) p.obj.visible = shown[kind];
+      }
+    });
+  }
 
   renderer.setAnimationLoop(() => {
     const w = canvas.clientWidth, h = canvas.clientHeight;
